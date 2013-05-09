@@ -348,3 +348,273 @@ class KKPaginator{
 	}	
 
 }
+
+class KKForm{
+	private static $m_instanceArray = array();
+	
+	private $m_id = null;
+	private $m_name = null;
+	private $m_method = "POST";
+	private $m_action = "";
+	private $m_elArray = array();
+	public $els = array();
+	
+	
+	private function __construct($name){
+		$this->m_id = $name;
+		$this->m_name = $name;
+	}
+	
+	public static function forge($name="default"){
+		if( !isset(self::$m_instanceArray[$name]) ){
+			self::$m_instanceArray[$name] = new self($name);
+		}
+		return self::$m_instanceArray[$name];
+	}
+	
+	public function setID($value=null){
+		if(isset($value) && !empty($value)){
+			$this->m_id = trim($value);
+		}
+		return $this;
+	}
+	
+	public function setName($value=null){
+		if(isset($value) && !empty($value)){
+			$this->m_name = trim($value);
+		}
+		return $this;
+	}
+	
+	public function setMethod($value=null){
+		if(isset($value) && !empty($value)){
+			$this->m_method = trim($value);
+		}
+		return $this;
+	}
+	
+	public function setAction($value=null){
+		if(isset($value) && !empty($value)){
+			$this->m_action = trim($value);
+		}
+		return $this;
+	}
+
+	public function id(){
+		return $this->m_id;
+	}
+	
+	public function name(){
+		return $this->m_name;
+	}
+
+	public function method(){
+		return $this->m_method;
+	}
+	
+	public function action(){
+		return $this->m_action;
+	}
+	
+	public function start(){
+		return sprintf('<form id="%s" name="%s" method="%s" action="%s">',
+						$this->m_id,
+						$this->m_name,
+						$this->m_method,
+						$this->m_action
+				);
+	}
+	
+	public function end(){
+		return '</form>';
+	}
+	
+	public function add($item=null){
+		if(isset($item)){
+			$this->m_elArray[$item->getID()] = $item;
+		}
+		return $this;
+	}
+	
+	public function el($name){
+		if( isset($this->m_elArray[$name]) ) {
+			return $this->m_elArray[$name];
+		}
+		return null;
+	}
+	
+	public function buildElements(){
+		$this->els = $this->m_elArray;
+		return $this;
+	}
+	
+	public function renderHidden(){
+		$out = "";
+		foreach($this->m_elArray as $el){
+			if($el->isHidden()){
+				$out .= $el->render();
+			}
+		}
+		return $out;
+	}
+	
+}
+
+abstract class KKFormElement_Abs{
+	
+	protected $_id = null;
+	protected $_label = null;
+	protected $_value = null;
+	protected $_params = array();
+	protected $_attr = array();
+	protected $_class = array();
+	protected $_hidden = false;
+		
+	public function __construct( $id=null, $label='&nbsp;', $value=null, $params=array() ){
+		$this->_id = $id;
+		$this->_label = $label;
+		$this->_value = $value;
+		$this->_params = $params;
+	
+		$this->_attr = isset($this->_params['attr']) ? $this->_params['attr'] : array();
+		$this->_class = isset($this->_params['class']) ? $this->_params['class'] : array();
+		$this->_init();
+	}
+	
+	abstract function render();
+	
+	protected function _init(){		
+	}
+	
+	public function setAttr($name, $value=null){
+		$this->_attr[$name] = $value;
+		return $this;
+	}
+
+	public function removeAttr($name){
+		if( isset($this->_attr[$name]) ){
+			unset($this->_attr[$name]);
+		}
+		return $this;
+	}
+
+	public function addClass($name){
+		$cc = explode(' ', $name);
+		foreach($cc as $item){
+			$item = trim($item);
+			if(!in_array($item, $this->_class) && !empty($item) ){
+				$this->_class[] = $item;
+			}
+		}
+		return $this;
+	}	
+	
+	public function setParams($params=array()){
+		$this->_params = $params;
+		return $this; 
+	}
+	
+	protected function _attrToString(){
+		$str = '';
+		foreach($this->_attr as $key => $value){
+			$str .= sprintf(' %s="%s"',$key,$value);
+		}
+		return $str;
+	}	
+
+	protected function _classToString(){
+		if(count($this->_class)){
+			return 'class="' .  implode(' ',$this->_class) . '"';
+		}
+		return null;
+	}
+
+	public function setValue($value){
+		$this->_value = $value;
+		return $this;
+	}
+
+	public function isHidden(){
+		return (true == $this->_hidden) ? true : false;
+	}
+
+	public function getID(){
+		return isset( $this->_id ) ? $this->_id : null;
+	}
+	
+	public function getLabel(){
+		return isset( $this->_label ) ? $this->_label : null;
+	}
+
+	public function getValue(){
+		return isset( $this->_value ) ? $this->_value : null;
+	}
+
+	public function getParams(){
+		return isset( $this->_params ) ? $this->_params : null;
+	}
+	
+	public function getElType(){
+		$str_pre = 'KKFormElement_';
+		$str_post = 'Element';
+		return substr(get_class($this), strlen($str_pre));
+	}	
+	
+	public function __toString(){
+		return $this->render();
+	}
+	
+}
+
+class KKFormElement_Text extends KKFormElement_Abs{
+	public function render(){
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+		return sprintf('<input type="text" id="%s" name="%s" value="%s" %s %s />',
+				$this->_id,
+				$this->_id,
+				$this->_value,
+				$attr,
+				$class);
+	}
+}
+
+class KKFormElement_Select extends KKFormElement_Abs{
+
+	public function render(){
+		$options = array();
+		$options = $this->_params['options'];
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+
+		$result = "<select name=\"{$this->_id}\" id=\"$this->_id\" {$attr} {$class} >";
+		foreach($options as $key => $value){
+			if($key == $this->_value){
+				$selected = "selected=\"selected\"";
+			}else{
+				$selected = "";
+			}
+			$result .= 	"<option value=\"{$key}\" {$selected} >{$value}</option>";
+		}
+		$result .= "</select>";
+
+		return $result;
+	}
+
+}
+
+
+class KKFormElement_Hidden extends KKFormElement_Abs{
+	protected function _init(){
+		$this->_hidden = true;
+	}
+
+	public function render(){
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+		return "<input type=\"hidden\" name=\"{$this->_id}\" id=\"{$this->_id}\" value=\"{$this->_value}\"  {$class} {$attr} />";
+	}
+
+}
+
+
