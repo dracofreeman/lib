@@ -346,7 +346,6 @@ class KKPaginator{
 		$data["req_name"] = $this->m_reqName;
 		return $data;
 	}	
-
 }
 
 class KKForm{
@@ -358,7 +357,6 @@ class KKForm{
 	private $m_action = "";
 	private $m_elArray = array();
 	public $els = array();
-	
 	
 	private function __construct($name){
 		$this->m_id = $name;
@@ -428,19 +426,24 @@ class KKForm{
 	public function end(){
 		return '</form>';
 	}
-	
-	public function add($item=null){
-		if(isset($item)){
-			$this->m_elArray[$item->getID()] = $item;
+
+	public function add( $type='Text', $id=null, $label='&nbsp;', $value=null, $params=array() ){
+		if(null == $id){
+			die( __FILE__ . '::' . __LINE__);
 		}
-		return $this;
-	}
+		$this->m_elArray[$id] = KKFormElements::forge($type, $id, $label, $value, $params);
+		return $this->m_elArray[$id];
+	}	
 	
 	public function el($name){
 		if( isset($this->m_elArray[$name]) ) {
 			return $this->m_elArray[$name];
 		}
 		return null;
+	}
+	
+	public function el_label($name){
+		return $this->el($name)->getLabel();		
 	}
 	
 	public function buildElements(){
@@ -457,11 +460,16 @@ class KKForm{
 		}
 		return $out;
 	}
-	
+}
+
+class KKFormElements{
+	public static function forge($type, $id=null, $label='&nbsp;', $value=null, $params=array()){
+		$entity = sprintf('KKFormElement_%s', $type);
+		return new $entity($id, $label, $value, $params);		
+	}
 }
 
 abstract class KKFormElement_Abs{
-	
 	protected $_id = null;
 	protected $_label = null;
 	protected $_value = null;
@@ -470,7 +478,7 @@ abstract class KKFormElement_Abs{
 	protected $_class = array();
 	protected $_hidden = false;
 		
-	public function __construct( $id=null, $label='&nbsp;', $value=null, $params=array() ){
+	public function __construct($id=null, $label='&nbsp;', $value=null, $params=array()){
 		$this->_id = $id;
 		$this->_label = $label;
 		$this->_value = $value;
@@ -556,7 +564,6 @@ abstract class KKFormElement_Abs{
 	
 	public function getElType(){
 		$str_pre = 'KKFormElement_';
-		$str_post = 'Element';
 		return substr(get_class($this), strlen($str_pre));
 	}	
 	
@@ -579,8 +586,33 @@ class KKFormElement_Text extends KKFormElement_Abs{
 	}
 }
 
-class KKFormElement_Select extends KKFormElement_Abs{
+class KKFormElement_Password extends KKFormElement_Abs{
+	public function render(){
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+		return sprintf('<input type="password" id="%s" name="%s" value="%s" %s %s />',
+				$this->_id,
+				$this->_id,
+				$this->_value,
+				$attr,
+				$class);
+	}
+}
 
+class KKFormElement_Label extends KKFormElement_Abs{
+	public function render(){
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+		return sprintf('<label id="%s" name="%s" %s %s>%s</label>',
+				$this->_id,
+				$this->_id,
+				$attr,
+				$class,
+				$this->_value);
+	}
+}
+
+class KKFormElement_Select extends KKFormElement_Abs{
 	public function render(){
 		$options = array();
 		$options = $this->_params['options'];
@@ -600,9 +632,7 @@ class KKFormElement_Select extends KKFormElement_Abs{
 
 		return $result;
 	}
-
 }
-
 
 class KKFormElement_Hidden extends KKFormElement_Abs{
 	protected function _init(){
@@ -614,7 +644,108 @@ class KKFormElement_Hidden extends KKFormElement_Abs{
 		$class = $this->_classToString();
 		return "<input type=\"hidden\" name=\"{$this->_id}\" id=\"{$this->_id}\" value=\"{$this->_value}\"  {$class} {$attr} />";
 	}
-
 }
 
+class KKUri{
+	private static $m_instance = array();
+	private $m_url = null;
+	private $m_scheme = null;
+	private $m_host = null;
+	private $m_path = null;
+	private $m_query = null;
+	private $m_queryArray = array();
+	
+	private function __construct($url=null){
+		if(isset($url) && !empty($url)){
+			$this->m_url = $url;
+		}else{
+			$this->m_url = $_SERVER["REQUEST_URI"];
+		}
+		$this->m_parse_url($this->m_url);
+	}
+	
+	public static function forge($name="default", $url=null){
+		if(!isset(self::$m_instance[$name])){
+			self::$m_instance[$name] = new self($url);
+		}
+		return self::$m_instance[$name];
+	}
+	
+	private function m_parse_url($url){
+		$cc = parse_url($url);
+		
+		$this->m_scheme = isset($cc["scheme"]) ? $cc["scheme"] : null; 
+		$this->m_host = isset($cc["host"]) ? $cc["host"] : null; 
+		$this->m_path = isset($cc["path"]) ? $cc["path"] : null; 
+		$this->m_query = isset($cc["query"]) ? $cc["query"] : null;
+		
+		$qq = explode("&", $cc["query"]);
+		$data = array();
+		foreach($qq as $item){
+			list($k, $v) = explode("=", $item);
+			($k) &&	($data[$k] = $v);
+		}	
+		$this->m_queryArray = $data;
+	}
+	
+	public function reset(){
+		$this->m_parse_url($this->m_url);
+		return $this;
+	}
+	
+	public function edit($name, $value){
+		$this->m_queryArray[$name] = $value;	
+		return $this;
+	}
+	
+	public function remove($name){
+		unset($this->m_queryArray[$name]);
+		return $this;
+	}
+	
+	public function reserve(){
+		$args = func_get_args();
+		$dataArray = array();
+		foreach($this->m_queryArray as $key => $item){
+			if(!in_array($key, $args)){
+				continue;
+			}
+			$dataArray[$key] = $item;
+		}
+		$this->m_queryArray = $dataArray; 
+		return $this;
+	}
+	
+	public function queryString(){
+		return http_build_query($this->m_queryArray);
+	}
+	
+	public function render(){
+		$args = func_get_args();
 
+		if(in_array("?", $args)){
+			return "?".$this->queryString();
+		}
+		
+		if(!func_num_args()){
+			$scheme = $this->m_scheme;
+			$host = $this->m_host;
+			$path = $this->m_path;
+			$query = $this->queryString();
+		}else{
+			$scheme = in_array("scheme", $args) && $this->m_scheme ? $this->m_scheme : null;
+			$host = in_array("host", $args) && $this->m_host ? $this->m_host : null;
+			$path = in_array("path", $args) && $this->m_path ? $this->m_path : null;
+			$query = in_array("query", $args) ? $this->queryString() : null;
+		}
+		
+		return sprintf("%s%s%s%s%s%s",
+					$scheme,
+					$scheme && $host ? "://" : null,
+					$host,
+					$path,
+					$path && $query ? "?" : null,
+					$query
+				);
+	}
+}
