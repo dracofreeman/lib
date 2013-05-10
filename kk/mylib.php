@@ -276,6 +276,7 @@ class KKPaginator{
 		$this->m_procStartEndPage();
 
 		$this->m_start = $this->m_limit*($this->m_current-1);
+		$this->m_start = $this->m_start < 0 ? 0 : $this->m_start; 
 	}
 
 	private function m_procStartEndPage(){
