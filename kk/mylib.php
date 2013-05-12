@@ -44,19 +44,56 @@ class SMS{
 	}
 }
 
+class TeleAcc_Factory{
+	
+	private static $m_instance = array();
+	private $m_db = null;
+	private $m_hall_id = null;
+	private $m_acc_list = array();
+	private $m_current = 0;
+	
+	private function __construct($hall_id){
+		$this->m_db = KKDB::forge();
+		$this->m_hall_id = $hall_id;
+		$this->m_acc_list = $this->m_getTeleAccList();
+		
+	}
+	
+	public static function forge($hall_id){
+		if(isset($hall_id) && !isset(self::$m_instance[$hall_id])){
+			self::$m_instance[$hall_id] = new self($hall_id);
+		}
+		return self::$m_instance[$hall_id];
+	}
+	
+	private function m_getTeleAccList(){
+		$sql = sprintf("select * from tele_acc where hall_id = '%s'", $this->m_hall_id);
+		return $this->m_db->fetchAll($sql);
+	}
+	
+	public function next(){
+// 		if( count($this->m_acc_list)){
+// 		}
+	}
+	
+	public function test(){
+		return $this->m_getTeleAccList();
+	}
+	
+}
 
 class KKDB{
 	private static $m_instance = null;
 	private $m_conn = null;
 	
-	private function __construct(){
-		$this->m_conn = mysql_connect("localhost", "root", "");
-		mysql_select_db("project_43425", $this->m_conn);
+	private function __construct($host, $username, $password, $db=null){
+		$this->m_conn = mysql_connect($host, $username, $password);
+		mysql_select_db($db, $this->m_conn);
 	}
 	
-	public static function forge(){
+	public static function forge($host=null, $username=null, $password=null, $db=null){
 		if(null == self::$m_instance){
-			self::$m_instance = new self();
+			self::$m_instance = new self($host, $username, $password, $db);
 		}
 		return self::$m_instance;
 	}
@@ -77,14 +114,6 @@ class KKDB{
 			$rows[] = $row;
 		}
 		return $rows;
-	}
-	
-	public function set_string($data){
-		$col = array();
-		foreach($data as $key => $item){
-			$col[] = sprintf("%s='%s'", $key, $item);
-		}
-		return implode(", ", $col);
 	}
 }
 
