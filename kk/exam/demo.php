@@ -22,6 +22,7 @@ class controller{
 	public function index(){
 		$this->m_view->assign("link_uri", $this->m_uri->reset()->edit("method", "uri")->render("?"));
 		$this->m_view->assign("link_form", $this->m_uri->reset()->edit("method", "form")->render("?"));
+		$this->m_view->assign("link_page", $this->m_uri->reset()->edit("method", "page")->edit("ppp", "2")->render("?"));
 		echo $this->m_view;	
 	}
 	
@@ -56,6 +57,20 @@ class controller{
 		echo $form->el("lst001");
 		echo $form->end();
 		
+		echo sprintf('<p><a href="%s">Back</a></p>', $this->m_uri->reset()->edit("method", "index")->render("?"));
+	}
+	
+	public function page(){
+		$options = array();
+		for($i=1; $i<108; $i++){
+			$options[$i] = "第" . $i . "項";
+		}
+		
+		$pg = KKPaginator::forge("users", count($options));
+		echo $pg->build()->get_limit_sql();
+		echo "<pre>";
+		print_r($pg->getResultArray());
+		echo "</pre>";
 		echo sprintf('<p><a href="%s">Back</a></p>', $this->m_uri->reset()->edit("method", "index")->render("?"));
 	}
 }

@@ -15,9 +15,11 @@ jQuery(function(){
 <body>
 <h2>index</h2>
 <hr>
-<a href="<?php $this->_("link_uri"); ?>">uri</a>
+<a href="<?php $this->_("link_uri"); ?>">Uri</a>
 <br>
-<a href="<?php $this->_("link_form"); ?>">form</a>
+<a href="<?php $this->_("link_form"); ?>">Form</a>
+<br>
+<a href="<?php $this->_("link_page"); ?>">Paginator</a>
 <br>
 </body>
 </html>
