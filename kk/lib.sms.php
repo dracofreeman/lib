@@ -179,7 +179,7 @@ class Queue{
 		if(!isset($hall_id) || !isset($mid) || $this->m_checkItemExists($hall_id, $mid)){
 			return false;
 		}
-		$sql = sprintf("INSERT INTO %s SET hall_id = '%s', mid = '%s', state = '%s', send_num = '%s'",
+		$sql = sprintf("INSERT INTO `%s` SET `hall_id` = '%s', `mid` = '%s', `state` = '%s', `send_num` = '%s'",
 				$this->m_table,
 				$hall_id,
 				$mid,
@@ -195,11 +195,11 @@ class Queue{
 		$setArray = array();
 		foreach($data as $key => $value){
 			if(in_array($key, array("hall_id", "mid", "state", "send_num", "isDeal", "send_result", "last_send_dt"))){
-				$setArray[] = sprintf("%s='%s'", $key, $value);
+				$setArray[] = sprintf("`%s` = '%s'", $key, $value);
 			}
 		}
 		
-		$sql = sprintf("UPDATE %s SET %s WHERE id='%s'",
+		$sql = sprintf("UPDATE `%s` SET %s WHERE `id` = '%s'",
 				$this->m_table,
 				implode(", ", $setArray),
 				$id
@@ -211,7 +211,7 @@ class Queue{
 	 * 更新 tuple 的「排程處理中」的狀態
 	 */
 	public function updateDealState($id, $isDeal){
-		$sql = sprintf("UPDATE %s SET isDeal='%s' WHERE id='%s'",
+		$sql = sprintf("UPDATE `%s` SET `isDeal` = '%s' WHERE `id` = '%s'",
 				$this->m_table,
 				$isDeal ? 1 : 0,
 				$id
@@ -223,7 +223,7 @@ class Queue{
 	 * 判定此 tuple 是否存在
 	 */
 	private function m_checkItemExists($hall_id, $mid){
-		$sql = sprintf("SELECT count(*) as count FROM %s WHERE hall_id='%s' AND mid='%s'",
+		$sql = sprintf("SELECT COUNT(*) as count FROM `%s` WHERE `hall_id` = '%s' AND `mid` = '%s'",
 				$this->m_table,
 				$hall_id,
 				$mid);
@@ -237,7 +237,7 @@ class Queue{
 	 * 待發送短信佇列 的撈出條件應為：未發送(state=0), 非處理中(isDeal=0)
 	 */
 	public function getDataRows(){
-		$sql = sprintf("SELECT * FROM %s WHERE state ='0' AND isDeal = '0' ORDER BY hall_id", $this->m_table);
+		$sql = sprintf("SELECT * FROM `%s` WHERE `state` ='0' AND `isDeal` = '0' ORDER BY `hall_id`", $this->m_table);
 		$this->m_db["Cs"]->query($sql);
 		$rows = $this->m_db["Cs"]->get_total_data();
 		return $rows;
@@ -247,7 +247,7 @@ class Queue{
 	 * 
 	 */
 	public function find($hall_id, $mid){
-		$sql = sprintf("SELECT * FROM %s WHERE hall_id='%s' AND mid='%s'", 
+		$sql = sprintf("SELECT * FROM `%s` WHERE `hall_id` = '%s' AND `mid` = '%s'", 
 						$this->m_table, 
 						$hall_id,
 						$mid);
@@ -257,7 +257,7 @@ class Queue{
 	}
 	
 	public function checkDeal(){
-		$sql = sprintf("SELECT count(*) count FROM %s WHERE isDeal='1'", $this->m_table);
+		$sql = sprintf("SELECT COUNT(*) count FROM `%s` WHERE `isDeal` = '1'", $this->m_table);
 		$this->m_db["Cs"]->query($sql);
 		$this->m_db["Cs"]->next_record();
 		return $this->m_db["Cs"]->f("count") > 0 ? true : false;
@@ -336,7 +336,14 @@ class TeleAccList{
 	 * @return array
 	 */
 	private function m_getTeleAccList(){
-		$sql = sprintf("SELECT * FROM %s WHERE hall_id = '%s'",
+		$sql = sprintf("SELECT 
+							* 
+						FROM 
+							`%s` 
+						WHERE 
+							`hall_id` = '%s' AND `is_enable` = '1' AND `balance` > '0'
+						ORDER BY 
+							`position` ASC",
 				$this->m_table,
 				$this->m_hall_id);
 		$this->m_db["Cs"]->query($sql);
@@ -575,7 +582,7 @@ class TeleAccTable{
 
 	/*
 	 * 建構子
-	*/
+	 */
 	private function __construct(){
 		$this->m_db["Cm"] = DB::forge("Cm");
 		$this->m_db["Cs"] = DB::forge("Cs");
@@ -591,7 +598,7 @@ class TeleAccTable{
 	}
 	
 	private function m_getTeleAccList(){
-		$sql = sprintf("SELECT * FROM %s ORDER BY hall_id", $this->m_table);
+		$sql = sprintf("SELECT * FROM `%s` ORDER BY `hall_id`", $this->m_table);
 		$this->m_db["Cs"]->query($sql);
 		$rows = $this->m_db["Cs"]->get_total_data();
 		return $rows;
@@ -640,7 +647,7 @@ class TeleAccTable{
 		$balance = $sms->queryBalance();
 		$bb = $balance > 0 ? $balance : 0;
 			
-		$sql = sprintf("UPDATE %s SET balance='%s' WHERE id = '%s'",
+		$sql = sprintf("UPDATE `%s` SET `balance` = '%s' WHERE `id` = '%s'",
 						$this->m_table, $bb, $row["id"]);
 			
  		$this->m_db["Cm"]->query($sql);

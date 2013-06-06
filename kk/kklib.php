@@ -45,7 +45,6 @@ class KKDB{
 class KKView{
 	
 	private $m_file = null;
-	private $m_data = null;
 	
 	private function __construct($file){
 		$this->m_file = $file;
@@ -53,18 +52,6 @@ class KKView{
 	
 	public static function forge($file){
 		return new self($file);
-	}
-	
-	public function assign($name, $value){
-		$this->m_data[$name] = $value;
-	}
-	
-	public function fetch($name, $default=null){
-		return isset($this->m_data[$name]) ? $this->m_data[$name] : $default;
-	}
-	
-	public function _($name, $default=null){
-		echo $this->fetch($name, $default);
 	}
 	
 	public function render(){
@@ -104,11 +91,11 @@ class KKInput{
 	}
 
 	public function post($name=null, $default=null){
-		return  (isset($this->m_postArray[$name])) ? trim($this->m_postArray[$name]) : $default;
+		return  (isset($this->m_postArray[$name])) ? $this->m_postArray[$name] : $default;
 	}
 	
 	public function req($name=null, $default=null){
-		return  (isset($this->m_reqArray[$name])) ? trim($this->m_reqArray[$name]) : $default;
+		return  (isset($this->m_reqArray[$name])) ? $this->m_reqArray[$name] : $default;
 	}
 }
 
@@ -191,7 +178,7 @@ class KKString{
 	public static function sql_set($data){
 		$col = array();
 		foreach($data as $key => $item){
-			$col[] = sprintf("%s='%s'", $key, $item);
+			$col[] = sprintf("`%s` = '%s'", $key, $item);
 		}
 		return implode(", ", $col);
 	}
@@ -597,6 +584,30 @@ class KKFormElement_Select extends KKFormElement_Abs{
 	}
 }
 
+class KKFormElement_Radio extends KKFormElement_Abs{
+	public function render(){
+		$options = array();
+		$options = $this->_params['options'];
+		$attr = $this->_attrToString();
+		$class = $this->_classToString();
+		
+		$result = '';	$i=0;
+		foreach($options as $key => $value){
+			if($key == $this->_value){
+				$checked = "checked=\"checked\"";
+			}else{
+				$checked = "";
+			}
+			if($i){
+				$class=null;
+			}
+			$result .= " <label><input type=\"radio\" name=\"{$this->_id}\" id=\"{$this->_id}_{$i}\" value=\"{$key}\" {$checked} {$class} {$attr}  />{$value}</label>";
+			$i++;
+		}
+		return $result;
+	}
+}
+
 class KKFormElement_Hidden extends KKFormElement_Abs{
 	protected function _init(){
 		$this->_hidden = true;
@@ -641,9 +652,8 @@ class KKUri{
 		$this->m_host = isset($cc["host"]) ? $cc["host"] : null; 
 		$this->m_path = isset($cc["path"]) ? $cc["path"] : null; 
 		$this->m_query = isset($cc["query"]) ? $cc["query"] : null;
-
-		$qq = isset($cc["query"]) ? explode("&", $cc["query"]) : array();
 		
+		$qq = explode("&", $cc["query"]);
 		$data = array();
 		foreach($qq as $item){
 			list($k, $v) = explode("=", $item);
@@ -711,5 +721,36 @@ class KKUri{
 					$path && $query ? "?" : null,
 					$query
 				);
+	}
+}
+
+class User{
+	private static $m_instance = null;
+	private $m_id = null;
+	private $m_user_id = null;
+	private $m_name_real = null;
+
+	private function __construct($id){
+		$this->m_buildDetail($id);
+	}
+
+	public static function forge($id){
+		if(!isset(self::$m_instance[$id])){
+			self::$m_instance[$id] = new self($id);
+		}
+		return self::$m_instance[$id];
+	}
+
+	private function m_buildDetail($id){
+		$data = DurianConn::Connect()->getUserDetail($id);
+		if(isset($data["result"]) && $data["result"]=="ok"){
+			$this->m_id = $data["ret"]["id"];
+			$this->m_user_id = $data["ret"]["user_id"];
+			$this->m_name_real = $data["ret"]["name_real"];
+		}
+	}
+	
+	public function getName(){
+		return $this->m_name_real;
 	}
 }
